@@ -8,13 +8,25 @@ from dotenv import load_dotenv
 # Konfigurationslogik für Umgebungsvariablen
 # *******************************
 
-# Prüfen, ob eine der kritischen Umgebungsvariablen bereits gesetzt ist (z.B. in Streamlit Cloud)
-# Wenn der OPENAI_API_KEY NICHT gesetzt ist, nehmen wir an, dass wir lokal laufen
-# und versuchen, die .env-Datei zu laden.
+# *******************************
+# Bedingter Import und Laden der Umgebungsvariablen
+# *******************************
 
-load_dotenv() 
-# Lade die Umgebungsvariablen aus der .env-Datei im Stammverzeichnis 
-# RR noch zu klären (Diese Zeile wird in Streamlit Cloud übersprungen)
+# Versuche, dotenv zu importieren und zu laden (nur für lokale Entwicklung)
+try:
+    from dotenv import load_dotenv
+    # Da die Keys im Terminal gesetzt sein könnten (höhere Prio), 
+    # rufen wir load_dotenv() trotzdem auf, um alle anderen lokalen Keys zu laden.
+    load_dotenv() 
+    print("INFO: .env Datei lokal geladen.") # Optional: Nur zum Debuggen
+except ImportError:
+    # Dies ist der Pfad in Streamlit Cloud, wo dotenv nicht installiert ist.
+    print("INFO: python-dotenv nicht installiert. Nutze Umgebungsvariablen/Secrets.") # Optional
+    pass
+
+# *******************************
+# Abrufen und Überprüfen (funktioniert sowohl lokal als auch in der Cloud)
+# *******************************
     
 
 # Stelle sicher, dass die Variablen nun gesetzt sind, BEVOR der Code weiterläuft.
