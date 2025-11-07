@@ -21,7 +21,17 @@ if project_root not in sys.path:
 # *****************************************************************
 
 # 3. Jetzt funktioniert der Import wie in der app.py
+# *****************************************************************
+# 1. Projekt-Root ermitteln (das Verzeichnis, in dem app.py liegt)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+# 2. Root zum Python-Suchpfad hinzufügen (nur falls nicht schon vorhanden)
+if current_dir not in sys.path:
+    sys.path.append(current_dir)
+
+# 3. Jetzt funktioniert der Import der Pipeline
 from src.rag_core.pipeline import get_rag_chain_response
+# *****************************************************************
 
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
