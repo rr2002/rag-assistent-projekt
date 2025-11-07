@@ -2,7 +2,7 @@ streamlit
 langchain
 langchain-openai
 langchain-community
-python-dotenv
+# python-dotenv
 openai
 pinecone-client
 tiktoken
