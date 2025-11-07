@@ -1,6 +1,8 @@
 streamlit
-tiktoken
-# Nur das Hauptpaket und die Extras (die die fehlenden Pakete beinhalten)
-langchain[openai,pinecone]
+langchain
+langchain-openai
+langchain-community
+python-dotenv
 openai
 pinecone-client
+tiktoken
