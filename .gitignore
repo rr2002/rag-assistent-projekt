@@ -1,0 +1,31 @@
+# Projekt: Chatbot RAG
+
+# Entwicklungs-Ordner ausschließen
+notebooks/
+
+# Daten ausschließen
+data/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Streamlit 
+.streamlit/secrets.toml
+
+# Virtuelle Umgebung & Environment Files
+venv/
+.env
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# VS Code Einstellungen
+.vscode/
+*.code-workspace
+
+# Systemdateien
+.DS_Store
+Thumbs.db
+
