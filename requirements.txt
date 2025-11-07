@@ -7,4 +7,3 @@ langchain-openai==1.0.2
 langchain-pinecone==0.2.13
 openai==2.7.1
 pinecone-client==6.0.0
-python-dotenv==1.2.1

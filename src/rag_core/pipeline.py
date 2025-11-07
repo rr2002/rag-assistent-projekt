@@ -11,10 +11,11 @@ from dotenv import load_dotenv
 # Prüfen, ob eine der kritischen Umgebungsvariablen bereits gesetzt ist (z.B. in Streamlit Cloud)
 # Wenn der OPENAI_API_KEY NICHT gesetzt ist, nehmen wir an, dass wir lokal laufen
 # und versuchen, die .env-Datei zu laden.
-if not os.getenv("OPENAI_API_KEY"):
-    # Lade die Umgebungsvariablen aus der .env-Datei im Stammverzeichnis 
-    # (Diese Zeile wird in Streamlit Cloud übersprungen)
-    load_dotenv() 
+
+load_dotenv() 
+# Lade die Umgebungsvariablen aus der .env-Datei im Stammverzeichnis 
+# RR noch zu klären (Diese Zeile wird in Streamlit Cloud übersprungen)
+    
 
 # Stelle sicher, dass die Variablen nun gesetzt sind, BEVOR der Code weiterläuft.
 # (Dies hilft, Laufzeitfehler zu vermeiden)
@@ -50,14 +51,26 @@ llm = ChatOpenAI(model="gpt-5", temperature=0)
 INDEX_NAME = "ki-master"
 
 # Pinecone Initialisierung und Retriever-Erstellung
-# Stelle sicher, dass PINECONE_API_KEY und PINECONE_ENVIRONMENT (oder URL) in den Umgebungsvariablen sind!
-# Wichtig: Die Pinecone Bibliothek hat sich kürzlich geändert. Wir verwenden hier die aktuelle Methode.
+# Wir nutzen die LangChain-Methode, die oft einfacher ist und die ENV-Variable braucht.
+
 try:
-    # 1. Pinecone Client initialisieren
-    pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+    # 1. Pinecone Initialisierung (stellt die Umgebungsvariablen sicher)
+    #    LangChain's Pinecone integration liest diese Keys direkt, 
+    #    wenn sie als Umgebungsvariable gesetzt sind.
     
-    # 2. Den Vektor-Store laden
-    vectorstore = PineconeVectorStore(
+    # Sicherstellen, dass die LangChain-Komponente die Environment erkennt:
+    # Dies ist die sauberste Methode, wenn man PINECONE_API_KEY und PINECONE_ENVIRONMENT nutzt.
+    
+    # Es ist nicht notwendig, den Client 'pc' separat zu initialisieren, wenn LangChain es tut.
+    # Entferne die Zeile: pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+    
+    # **KORREKTUR:** Wir verwenden PineconeVectorStore.from_existing_index 
+    # und lassen ihn die Umgebungsvariablen PINECONE_API_KEY und PINECONE_ENVIRONMENT lesen.
+    
+    # 2. Den Vektor-Store laden über die LangChain-spezifische Methode
+    from langchain_pinecone import PineconeVectorStore # Stelle sicher, dass du dies importierst
+    
+    vectorstore = PineconeVectorStore.from_existing_index(
         index_name=INDEX_NAME, 
         embedding=embeddings
     )
@@ -66,9 +79,11 @@ try:
     retriever = vectorstore.as_retriever()
     
 except Exception as e:
-    # Das ist wichtig für das Streamlit Deployment
+    # Gebe den genauen Fehler aus, falls die Verbindung fehlschlägt.
     print(f"FEHLER beim Initialisieren von Pinecone/Retriever: {e}")
-    retriever = None # Setze den Retriever auf None, falls die Initialisierung fehlschlägt
+    retriever = None
+
+
 
 # --- 2. Prompt Template und Formatierungsfunktion ---
 

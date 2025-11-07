@@ -11,7 +11,7 @@ import sys
 current_dir = os.path.dirname(os.path.abspath(__file__)) # Aktuelles Verzeichnis (notebooks/)
 project_root = os.path.join(current_dir, os.pardir)     # Eine Ebene höher (Root-Verzeichnis)
 
-# RR current_dir = os.getcwd()
+# RR current_dirstreamlit run app.py = os.getcwd()
 # RR project_root = os.path.join(current_dir, os.pardir)
 
 # 2. Den Root-Pfad zum Python-Suchpfad hinzufügen
@@ -26,7 +26,13 @@ from src.rag_core.pipeline import get_rag_chain_response
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
 
-from src.rag_core.pipeline import get_rag_chain_response
+# VORÜBERGEHENDE DEBUG-FUNKTION:
+st.sidebar.markdown("---")
+st.sidebar.write(f"OPENAI KEY: {'Set' if os.getenv('OPENAI_API_KEY') else 'NICHT gesetzt'}")
+st.sidebar.write(f"PINECONE KEY: {'Set' if os.getenv('PINECONE_API_KEY') else 'NICHT gesetzt'}")
+st.sidebar.write(f"PINECONE ENV: {os.getenv('PINECONE_ENVIRONMENT')}")
+st.sidebar.markdown("---")
+# ENTFERNE DIESEN CODE NACH DEM TEST
 
 # --- Angenommen, du importierst deine rag_chain (oder definierst sie hier neu) ---
 # Importiere die notwendigen LangChain-Komponenten
