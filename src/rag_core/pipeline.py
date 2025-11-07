@@ -2,7 +2,6 @@
 
 import os
 # Stelle sicher, dass python-dotenv installiert ist (steht in requirements.txt)
-from dotenv import load_dotenv 
 
 # *******************************
 # Konfigurationslogik für Umgebungsvariablen
