@@ -1,9 +1,6 @@
 streamlit
 tiktoken
-langchain
-langchain-community
-langchain-core
-langchain-openai
-langchain-pinecone
+# Nur das Hauptpaket und die Extras (die die fehlenden Pakete beinhalten)
+langchain[openai,pinecone]
 openai
 pinecone-client
