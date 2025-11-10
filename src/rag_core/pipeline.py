@@ -235,7 +235,7 @@ def get_rag_chain_response(question: str, chat_history: list):
     })
     
    
-    return response["answer"]
+    return response
 
     # RR auskommentiert 10.11.2025 weil oben bereits zugewiesen
     # Der .invoke() Aufruf in der LCEL Kette
