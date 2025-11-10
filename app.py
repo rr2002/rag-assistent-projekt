@@ -84,7 +84,7 @@ st.caption("Verwendet gpt-5 (LLM) und text-embedding-3-small (Embeddings) mit Pi
 # Verwende st.session_state, um den Chat-Verlauf zu speichern (wichtig bei Streamlit)
 if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = [
-        AIMessage(content="Hallo! Ich bin dein RAG-Chatbot. Frag mich etwas zu deinen Basisdaten.pdf!"),
+        AIMessage(content="Hallo! Ich bin Robert's digitaler Zwilling. Frag mich etwas zu meinem beruflichen Werdegang."),
     ]
 
 
@@ -113,7 +113,7 @@ if user_query is not None and user_query != "":
     with st.chat_message("AI"):
         with st.spinner("Antwort wird generiert..."):
             # Rufe deine tatsächliche RAG-Funktion auf
-            ai_response = get_rag_response(user_query)
+            ai_response = get_rag_response(user_query, st.session_state.chat_history)
             st.write(ai_response)
             
     # 3. Füge die AI-Antwort zum Verlauf hinzu

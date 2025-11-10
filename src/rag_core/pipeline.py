@@ -43,14 +43,14 @@ if not all([OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_ENVIRONMENT]):
 
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 # from langchain.chains import create_retrieval_chain
 # Du benötigst den Pinecone Client und den Vektor-Speicher-Adapter
 from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.messages import AIMessage, HumanMessage
 
 
 # --- 1. Initialisierung der Komponenten ---
@@ -133,13 +133,124 @@ else:
 # --- 4. Exponierte Funktion für Streamlit ---
 
 
-def get_rag_chain_response(question: str) -> str:
-    """Führt die RAG-Kette mit einer Benutzerfrage aus."""
+# RR auskommentiert 10.11.2025
+# def get_rag_chain_response(question: str) -> str:
+#     """Führt die RAG-Kette mit einer Benutzerfrage aus."""
+#     # Der .invoke() Aufruf in der LCEL Kette
+#     if retriever:
+#         return rag_chain.invoke(question)
+#     else:
+#         return rag_chain.invoke(None) # Ruft die Ersatz-Funktion auf, wenn der Retriever fehlt
+
+# src/rag_core/pipeline.py
+
+# Notwendige neue Imports
+from langchain.chains import create_history_aware_retriever, create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain.chains.history_aware_retriever
+
+# Annahme: Du hast bereits 'llm' (z.B. ChatOpenAI) und 'vectorstore' (Pinecone) initialisiert.
+# Beispielhafte Initialisierungen (deine sind wahrscheinlich woanders)
+# from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+# from langchain_pinecone import PineconeVectorStore
+# llm = ChatOpenAI(model="gpt-4o", temperature=0)
+# embeddings = OpenAIEmbeddings()
+# vectorstore = PineconeVectorStore(index_name="dein-index", embedding=embeddings)
+
+
+def get_rag_chain_response(question: str, chat_history: list):
+
+    # Generiert eine Antwort unter Berücksichtigung des Chat-Verlaufs.
+    # Args:
+    #     question (str): Die aktuelle Frage des Benutzers.
+    #     chat_history (list): Eine Liste von HumanMessage und AIMessage Objekten.
+    # Returns:
+    #     str: Die generierte Antwort.
+   
+    # RR auskommentiert 10.11.2025 weil oben bereits zugewiesen
+    # retriever = vectorstore.as_retriever()
+
+    # 1. Prompt für die Umformulierung der Frage (Contextualizing question)
+    contextualize_q_system_prompt = (
+        "Angesichts eines Chat-Verlaufs und der neuesten Benutzerfrage, "
+        "die sich auf den Kontext des Chat-Verlaufs beziehen könnte, "
+        "formuliere eine eigenständige Frage, die ohne den Chat-Verlauf "
+        "verstanden werden kann. Beantworte die Frage NICHT, "
+        "sondern formuliere sie bei Bedarf nur um, andernfalls gib sie unverändert zurück."
+    )
+    
+    contextualize_q_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", contextualize_q_system_prompt),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+    
+        # LCEL-Kette, um die Frage neu zu formulieren
+    rephrase_question_chain = (
+        contextualize_q_prompt
+        | llm
+        | StrOutputParser()
+    )
+
+    # Hilfsfunktion, um die Dokumente für das finale Prompt zu formatieren
+    # RR: um überflüssige Infos aus der Rückantwort zu entfernen
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
+
+    # 2. Prompt für die finale Antwortgenerierung
+    qa_system_prompt = (
+    "Du bist ein Assistent für Fragen-Antworten-Aufgaben. Verwende die folgenden "
+    "abgerufenen Kontextinformationen, um die Frage zu beantworten.  "
+    "Wenn du die Antwort nicht kennst, sage einfach, dass du es nicht weißt. "
+    "Verwende maximal drei Sätze und halte die Antwort prägnant."
+        "\n\n"
+        "{context}"
+    )
+    qa_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", qa_system_prompt),
+            MessagesPlaceholder("chat_history"),
+            ("human", "{input}"),
+        ]
+    )
+
+    # 3. Komposition der gesamten RAG-Kette mit LCEL
+    rag_chain = (
+        # Das Eingabedictionary wird durchgereicht
+        RunnablePassthrough.assign(
+            # Neuer Schlüssel 'context' wird hinzugefügt.
+            # Er wird gefüllt, indem die Eingabe ('input', 'chat_history')
+            # an die 'rephrase_question_chain' geht, deren Ergebnis (die neue Frage)
+            # dann an den 'retriever' übergeben wird.
+            context=rephrase_question_chain | retriever | RunnableLambda(format_docs)
+        )
+        # Das erweiterte Dictionary ('input', 'chat_history', 'context')
+        # wird an das finale Prompt übergeben.
+        | qa_prompt
+        | llm
+        | StrOutputParser()
+    )
+
+    # 4. Kette aufrufen
+    response = rag_chain.invoke({
+        "input": question,
+        "chat_history": chat_history
+    })
+    
+   
+    return response["answer"]
+
+    # RR auskommentiert 10.11.2025 weil oben bereits zugewiesen
     # Der .invoke() Aufruf in der LCEL Kette
-    if retriever:
-        return rag_chain.invoke(question)
-    else:
-        return rag_chain.invoke(None) # Ruft die Ersatz-Funktion auf, wenn der Retriever fehlt
+    # if retriever:
+    #     return response["answer"]
+    # else:
+    #     return rag_chain.invoke(None) # Ruft die Ersatz-Funktion auf, wenn der Retriever fehlt
+
+
 
 
 # Beispiel für direkten Test (wird bei Import ignoriert, aber funktioniert beim direkten Ausführen)
