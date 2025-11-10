@@ -144,12 +144,6 @@ else:
 
 # src/rag_core/pipeline.py
 
-# Notwendige neue Imports
-from langchain.chains import create_history_aware_retriever, create_retrieval_chain
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain.chains.history_aware_retriever
-
 # Annahme: Du hast bereits 'llm' (z.B. ChatOpenAI) und 'vectorstore' (Pinecone) initialisiert.
 # Beispielhafte Initialisierungen (deine sind wahrscheinlich woanders)
 # from langchain_openai import ChatOpenAI, OpenAIEmbeddings
