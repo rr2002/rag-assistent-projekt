@@ -48,12 +48,6 @@ st.sidebar.markdown("---")
 # Importiere die notwendigen LangChain-Komponenten
 # from deine_rag_modul import rag_chain 
 
-# WICHTIG: Ersetze diesen Platzhalter durch deine tatsächliche rag_chain
-# Hier nehmen wir an, dass die rag_chain eine Funktion namens .invoke() hat
-def get_rag_response(question: str) -> str:
-    # hier rufst du deine echte RAG-Pipeline aus src.rag_core.pipeline auf
-    return get_rag_chain_response(question)
-
 
 # rr def get_rag_response(question):
 # rr    # ANPASSEN: Rufe hier deine definierte rag_chain auf
@@ -113,7 +107,7 @@ if user_query is not None and user_query != "":
     with st.chat_message("AI"):
         with st.spinner("Antwort wird generiert..."):
             # Rufe deine tatsächliche RAG-Funktion auf
-            ai_response = get_rag_response(question = user_query, chat_history = st.session_state.chat_history)
+            ai_response = get_rag_chain_response(question = user_query, chat_history = st.session_state.chat_history)
             st.write(ai_response)
             
     # 3. Füge die AI-Antwort zum Verlauf hinzu
