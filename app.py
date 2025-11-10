@@ -113,7 +113,7 @@ if user_query is not None and user_query != "":
     with st.chat_message("AI"):
         with st.spinner("Antwort wird generiert..."):
             # Rufe deine tatsächliche RAG-Funktion auf
-            ai_response = get_rag_response(user_query, st.session_state.chat_history)
+            ai_response = get_rag_response(question = user_query, chat_history = st.session_state.chat_history)
             st.write(ai_response)
             
     # 3. Füge die AI-Antwort zum Verlauf hinzu
