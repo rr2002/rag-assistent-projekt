@@ -53,9 +53,6 @@ st.sidebar.markdown("---")
 # rr    # ANPASSEN: Rufe hier deine definierte rag_chain auf
 # rr    response = rag_chain.invoke(question) 
     
-    # Platzhalter-Antwort
-    return f"ANTWORT deiner RAG-Pipeline auf: '{question}'"
-
 
 # --------------------------------------------------------------------------
 
