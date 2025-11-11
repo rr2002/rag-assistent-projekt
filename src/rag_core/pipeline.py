@@ -1,5 +1,6 @@
 # rag_core/pipeline.py
 
+import importlib
 import os
 # Stelle sicher, dass python-dotenv installiert ist (steht in requirements.txt)
 
@@ -60,14 +61,19 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_cohere import CohereRerank
 # from langchain_community.retrievers import ContextualCompressionRetriever
 # RR from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
-from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
-
-
+## from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
+# RR Wichtige Info:
+from langchain_classic.retrievers.contextual_compression 
+# lauf ChatGPT muss auf from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
+# umgestellt werden. langchain_classic wurde implementiert, weil die Module in requirements.txt generell wohl auf
+# älter Module verweisen. Bei Bedarf dann einmal anpassen.
+# from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 
 # from langchain.retrievers import ContextualCompressionRetriever
 # und falls du noch Compressor-Klassen nutzt, z.B.:
 # from langchain.retrievers.document_compressors import LLMChainExtractor, DocumentCompressorPipeline
-
+# from langchain.retrievers import ContextualCompressionRetriever
+# from langchain_core.retrievers.BaseRetriever  import ContextualCompressionRetriever
 
 # API Keys werden aus den Umgebungsvariablen gelesen (diese müssen im Streamlit Code gesetzt werden!)
 # Die Dimension war 1536
