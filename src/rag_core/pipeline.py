@@ -53,7 +53,7 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_core.messages import AIMessage, HumanMessage
 
 from langchain_cohere import CohereRerank
-from langchain.retrievers import ContextualCompressionRetriever
+from langchain_community.retrievers import ContextualCompressionRetriever
 
 
 # --- 1. Initialisierung der Komponenten ---
