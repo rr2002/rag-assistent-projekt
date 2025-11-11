@@ -309,6 +309,8 @@ def get_rag_chain_response(question: str, chat_history: list):
 
 
 
+# RR auskommentiert am 11.11. bei get_rag_chain_response(test_query) fehlt ein Parameter,
+# dieser müsste nachgetragen werden. Ansonsten kommt es hier zu einer Fehlermeldung.
 # Beispiel für direkten Test (wird bei Import ignoriert, aber funktioniert beim direkten Ausführen)
 # if __name__ == "__main__":
 #     print("Starte lokalen Test der RAG-Pipeline...")

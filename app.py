@@ -36,12 +36,13 @@ from src.rag_core.pipeline import get_rag_chain_response
 import streamlit as st
 from langchain_core.messages import AIMessage, HumanMessage
 
+# RR auskommentiert am 11.11 sinnvoll zum Debugen
 # VORÜBERGEHENDE DEBUG-FUNKTION:
-st.sidebar.markdown("---")
-st.sidebar.write(f"OPENAI KEY: {'Set' if os.getenv('OPENAI_API_KEY') else 'NICHT gesetzt'}")
-st.sidebar.write(f"PINECONE KEY: {'Set' if os.getenv('PINECONE_API_KEY') else 'NICHT gesetzt'}")
-st.sidebar.write(f"PINECONE ENV: {os.getenv('PINECONE_ENVIRONMENT')}")
-st.sidebar.markdown("---")
+# st.sidebar.markdown("---")
+# st.sidebar.write(f"OPENAI KEY: {'Set' if os.getenv('OPENAI_API_KEY') else 'NICHT gesetzt'}")
+# st.sidebar.write(f"PINECONE KEY: {'Set' if os.getenv('PINECONE_API_KEY') else 'NICHT gesetzt'}")
+# st.sidebar.write(f"PINECONE ENV: {os.getenv('PINECONE_ENVIRONMENT')}")
+# st.sidebar.markdown("---")
 # ENTFERNE DIESEN CODE NACH DEM TEST
 
 # --- Angenommen, du importierst deine rag_chain (oder definierst sie hier neu) ---
@@ -67,7 +68,7 @@ except KeyError:
 
 ## Streamlit UI Konfiguration
 st.set_page_config(page_title="PDF RAG Chatbot", layout="centered")
-st.title("📚 PDF-gestützter RAG-Chatbot")
+st.title("📚 Digitaler Chatbot - Ask me anything")
 st.caption("Verwendet gpt-5 (LLM) und text-embedding-3-small (Embeddings) mit Pinecone.")
 
 
