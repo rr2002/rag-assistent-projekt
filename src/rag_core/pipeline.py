@@ -259,7 +259,7 @@ def get_rag_chain_response(question: str, chat_history: list):
     
      # RR Temporärer Debug-Schritt:
     rephrased_question = rephrase_question_chain.invoke({"input": question, "chat_history": chat_history})
-    print(f"DEBUG: Original='{question}' | Rephrased='{rephrased_question}'")
+    print(f"Version:1 DEBUG: Original='{question}' | Rephrased='{rephrased_question}'")
     
    
     return response
