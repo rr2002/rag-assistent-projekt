@@ -3,12 +3,31 @@
 import os
 
 # *******************************
-# Konfigurationslogik für Umgebungsvariablen
-# *******************************
-
-# *******************************
 # Bedingter Import und Laden der Umgebungsvariablen
 # *******************************
+
+# --- 1. Initialisierung der Komponenten ---
+
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnablePassthrough, RunnableLambda
+from langchain_core.output_parsers import StrOutputParser
+from pinecone import Pinecone
+from langchain_pinecone import PineconeVectorStore
+from langchain_core.messages import AIMessage, HumanMessage
+from langchain_cohere import CohereRerank
+from langchain_core.runnables import RunnableBranch # notwendig für Guard-Rails
+from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
+# RR Wichtige Info:
+# Support für langchain_classic wird 2026 eingestellt. Stattdessen wird langchain direkt
+# verwendet. Ein Retriever müsste dann irgendwie so erzeugt werden:
+# from langchain.retrievers import ContextualCompressionRetriever
+# oder
+# from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
+# aktuell gibt es für den Retriever nur ein (leeres) Interface welches überschrieben werden kann.
+# Eine Funktion steht laut ChatGPT noch nicht zur Verfügung. 
+
+
 
 # Versuche, dotenv zu importieren und zu laden (nur für lokale Entwicklung)
 try:
@@ -41,27 +60,6 @@ if not all([OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_ENVIRONMENT]):
     print("FEHLER: Nicht alle kritischen API-Schlüssel sind als Umgebungsvariable gesetzt.")
     # Du könntest hier auch raise ValueError(...) aufrufen
 # *******************************
-
-# --- 1. Initialisierung der Komponenten ---
-
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.runnables import RunnablePassthrough, RunnableLambda
-from langchain_core.output_parsers import StrOutputParser
-from pinecone import Pinecone
-from langchain_pinecone import PineconeVectorStore
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_cohere import CohereRerank
-from langchain_core.runnables import RunnableBranch # notwendig für Guard-Rails
-from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
-# RR Wichtige Info:
-# Support für langchain_classic wird 2026 eingestellt. Stattdessen wird langchain direkt
-# verwendet. Ein Retriever müsste dann irgendwie so erzeugt werden:
-# from langchain.retrievers import ContextualCompressionRetriever
-# oder
-# from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
-# aktuell gibt es für den Retriever nur ein (leeres) Interface welches überschrieben werden kann.
-# Eine Funktion steht laut ChatGPT noch nicht zur Verfügung. 
 
 
 
@@ -298,7 +296,7 @@ def get_rag_chain_response(question: str, chat_history: list):
        
 
     # --- 8. Kette aufrufen ---
-    response = rag_chain.invoke({
+    response = full_chain.invoke({
         "input": question,
         "chat_history": chat_history
     })
