@@ -52,6 +52,9 @@ from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.messages import AIMessage, HumanMessage
 
+from langchain_cohere import CohereRerank
+from langchain.retrievers import ContextualCompressionRetriever
+
 
 # --- 1. Initialisierung der Komponenten ---
 
@@ -165,7 +168,26 @@ def get_rag_chain_response(question: str, chat_history: list):
     # RR auskommentiert 10.11.2025 weil oben bereits zugewiesen
     # retriever = vectorstore.as_retriever()
 
-    # 1. Prompt für die Umformulierung der Frage (Contextualizing question)
+    #  Generiert eine Antwort mit Reranking zur Verbesserung der Kontextqualität.
+
+    # 1a. Cohere Reranker initialisieren
+    # Der API-Schlüssel wird automatisch aus der Umgebungsvariable COHERE_API_KEY gelesen
+    reranker = CohereRerank(top_n=3) # Gibt die Top 3 Dokumente nach dem Reranking zurück
+
+    # 1b. Base Retriever konfigurieren, um MEHR Dokumente abzurufen (wichtig!)
+    # Wir geben dem Reranker eine größere Auswahl, aus der er die besten auswählen kann.
+    base_retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
+
+    # 1c. Contextual Compression Retriever erstellen
+    # Dieser "wickelt" sich um den Base Retriever und den Reranker
+    compression_retriever = ContextualCompressionRetriever(
+        base_compressor=reranker, base_retriever=base_retriever
+    )
+
+
+
+
+    # 2. Prompt für die Umformulierung der Frage (Contextualizing question)
     contextualize_q_system_prompt = (
         "Angesichts eines Chat-Verlaufs und der neuesten Benutzerfrage, "
         "die sich auf den Kontext des Chat-Verlaufs beziehen könnte, "
@@ -194,7 +216,7 @@ def get_rag_chain_response(question: str, chat_history: list):
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 
-    # 2. Prompt für die finale Antwortgenerierung
+    # 3. Prompt für die finale Antwortgenerierung
     qa_system_prompt = (
     "Du bist ein Assistent für Fragen-Antworten-Aufgaben. Verwende die folgenden "
     "abgerufenen Kontextinformationen, um die Frage zu beantworten.  "
@@ -211,7 +233,7 @@ def get_rag_chain_response(question: str, chat_history: list):
         ]
     )
 
-    # 3. Komposition der gesamten RAG-Kette mit LCEL
+    # 4. Komposition der gesamten RAG-Kette mit LCEL
     rag_chain = (
         # Das Eingabedictionary wird durchgereicht
         RunnablePassthrough.assign(
@@ -219,8 +241,9 @@ def get_rag_chain_response(question: str, chat_history: list):
             # Er wird gefüllt, indem die Eingabe ('input', 'chat_history')
             # an die 'rephrase_question_chain' geht, deren Ergebnis (die neue Frage)
             # dann an den 'retriever' übergeben wird.
-            context=rephrase_question_chain | retriever | RunnableLambda(format_docs)
+            context=rephrase_question_chain | compression_retriever  | RunnableLambda(format_docs)
         )
+        # RR 11.11.25 Zeile vorher: context=rephrase_question_chain | retriever | RunnableLambda(format_docs)
         # Das erweiterte Dictionary ('input', 'chat_history', 'context')
         # wird an das finale Prompt übergeben.
         | qa_prompt
@@ -228,7 +251,7 @@ def get_rag_chain_response(question: str, chat_history: list):
         | StrOutputParser()
     )
 
-    # 4. Kette aufrufen
+    # 5. Kette aufrufen
     response = rag_chain.invoke({
         "input": question,
         "chat_history": chat_history
