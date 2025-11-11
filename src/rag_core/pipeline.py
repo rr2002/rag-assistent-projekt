@@ -63,7 +63,7 @@ from langchain_cohere import CohereRerank
 # RR from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 ## from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
 # RR Wichtige Info:
-from langchain_classic.retrievers.contextual_compression 
+from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
 # lauf ChatGPT muss auf from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 # umgestellt werden. langchain_classic wurde implementiert, weil die Module in requirements.txt generell wohl auf
 # älter Module verweisen. Bei Bedarf dann einmal anpassen.
