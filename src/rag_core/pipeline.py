@@ -53,10 +53,16 @@ from langchain_pinecone import PineconeVectorStore
 from langchain_core.messages import AIMessage, HumanMessage
 
 from langchain_cohere import CohereRerank
-from langchain_community.retrievers import ContextualCompressionRetriever
-
+# from langchain_community.retrievers import ContextualCompressionRetriever
+# RR from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
+from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
 
 # --- 1. Initialisierung der Komponenten ---
+
+# from langchain.retrievers import ContextualCompressionRetriever
+# und falls du noch Compressor-Klassen nutzt, z.B.:
+# from langchain.retrievers.document_compressors import LLMChainExtractor, DocumentCompressorPipeline
+
 
 # API Keys werden aus den Umgebungsvariablen gelesen (diese müssen im Streamlit Code gesetzt werden!)
 # Die Dimension war 1536
