@@ -269,7 +269,7 @@ def get_rag_chain_response(question: str, chat_history: list):
                 # Er wird gefüllt, indem die Eingabe ('input', 'chat_history')
                 # an die 'rephrase_question_chain' geht, deren Ergebnis (die neue Frage)
                 # dann an den 'retriever' übergeben wird.
-                context=rephrase_question_chain | compression_retriever  | RunnableLambda(format_docs)
+                context=rephrase_question_chain | compression_retriever  | format_docs
             )
             # RR 11.11.25 Zeile vorher: context=rephrase_question_chain | retriever | RunnableLambda(format_docs)
             # Das erweiterte Dictionary ('input', 'chat_history', 'context')
