@@ -1,8 +1,6 @@
 # rag_core/pipeline.py
 
-import importlib
 import os
-# Stelle sicher, dass python-dotenv installiert ist (steht in requirements.txt)
 
 # *******************************
 # Konfigurationslogik für Umgebungsvariablen
@@ -30,8 +28,6 @@ except ImportError:
     
 
 # Stelle sicher, dass die Variablen nun gesetzt sind, BEVOR der Code weiterläuft.
-# (Dies hilft, Laufzeitfehler zu vermeiden)
-
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT") # Oder PINECONE_HOST
@@ -52,28 +48,22 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
-# from langchain.chains import create_retrieval_chain
-# Du benötigst den Pinecone Client und den Vektor-Speicher-Adapter
 from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.messages import AIMessage, HumanMessage
-
 from langchain_cohere import CohereRerank
-# from langchain_community.retrievers import ContextualCompressionRetriever
-# RR from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
-## from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
-# RR Wichtige Info:
+from langchain_core.runnables import RunnableBranch # notwendig für Guard-Rails
 from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
-# lauf ChatGPT muss auf from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
-# umgestellt werden. langchain_classic wurde implementiert, weil die Module in requirements.txt generell wohl auf
-# älter Module verweisen. Bei Bedarf dann einmal anpassen.
+# RR Wichtige Info:
+# Support für langchain_classic wird 2026 eingestellt. Stattdessen wird langchain direkt
+# verwendet. Ein Retriever müsste dann irgendwie so erzeugt werden:
+# from langchain.retrievers import ContextualCompressionRetriever
+# oder
 # from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
+# aktuell gibt es für den Retriever nur ein (leeres) Interface welches überschrieben werden kann.
+# Eine Funktion steht laut ChatGPT noch nicht zur Verfügung. 
 
-# from langchain.retrievers import ContextualCompressionRetriever
-# und falls du noch Compressor-Klassen nutzt, z.B.:
-# from langchain.retrievers.document_compressors import LLMChainExtractor, DocumentCompressorPipeline
-# from langchain.retrievers import ContextualCompressionRetriever
-# from langchain_core.retrievers.BaseRetriever  import ContextualCompressionRetriever
+
 
 # API Keys werden aus den Umgebungsvariablen gelesen (diese müssen im Streamlit Code gesetzt werden!)
 # Die Dimension war 1536
@@ -162,16 +152,6 @@ else:
 #     else:
 #         return rag_chain.invoke(None) # Ruft die Ersatz-Funktion auf, wenn der Retriever fehlt
 
-# src/rag_core/pipeline.py
-
-# Annahme: Du hast bereits 'llm' (z.B. ChatOpenAI) und 'vectorstore' (Pinecone) initialisiert.
-# Beispielhafte Initialisierungen (deine sind wahrscheinlich woanders)
-# from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-# from langchain_pinecone import PineconeVectorStore
-# llm = ChatOpenAI(model="gpt-4o", temperature=0)
-# embeddings = OpenAIEmbeddings()
-# vectorstore = PineconeVectorStore(index_name="dein-index", embedding=embeddings)
-
 
 def get_rag_chain_response(question: str, chat_history: list):
 
@@ -182,31 +162,56 @@ def get_rag_chain_response(question: str, chat_history: list):
     # Returns:
     #     str: Die generierte Antwort.
    
-    # RR auskommentiert 10.11.2025 weil oben bereits zugewiesen
-    # retriever = vectorstore.as_retriever()
+    
+    if not vectorstore:
+        return "Entschuldigung, die Verbindung zum ChatBot ist fehlgeschlagen."
 
-    #  Generiert eine Antwort mit Reranking zur Verbesserung der Kontextqualität.
 
-    # 1a. Cohere Reranker initialisieren
-    # Der API-Schlüssel wird automatisch aus der Umgebungsvariable COHERE_API_KEY gelesen
-    # RR mit ChatGPT auskommentiert und Zeile unterhalb hinzugefügt
-    # reranker = CohereRerank(top_n=3) # Gibt die Top 3 Dokumente nach dem Reranking zurück
-    reranker = CohereRerank(model=COHERE_RERANK_MODEL, top_n=3) # Gibt die Top 3 Dokumente nach dem Reranking zurück
+    # --- 1. GUARD-RAIL KETTE: Themenrelevanz prüfen ---
+    # Definiation der erlaubten Themen. 
+    allowed_topic = "den beruflichen Werdegang, die Hobbies, die Interessen, die Fähigkeiten und die Projekte von Robert"
+    
+    relevance_check_prompt = ChatPromptTemplate.from_template(
+        f"""
+        Die folgende Benutzerfrage wird gestellt. Bezieht sich diese Frage auf {allowed_topic}? 
+        Antworte ausschließlich mit 'Ja' oder 'Nein'.
+        
+        Benutzerfrage: "{{question}}"
+        """
+    )
+    
+    relevance_checker_chain = (
+        relevance_check_prompt
+        | llm
+        | StrOutputParser()
+    )
+    
+    
+    
+    # --- 2. Kette für themenfremde Fragen ---
+    off_topic_response_chain = RunnableLambda(
+        lambda x: f"Entschuldigung, ich kann nur Fragen beantworten, die sich auf {allowed_topic} beziehen."
+    )
+    
 
-    # 1b. Base Retriever konfigurieren, um MEHR Dokumente abzurufen (wichtig!)
+
+    # --- 3. Reranker ---
+    # Reranking zur Verbesserung der Kontextqualität.
+    # 3a. Cohere Reranker initialisieren
+    reranker = CohereRerank(model=COHERE_RERANK_MODEL, top_n=5) # Gibt die Top 5 Dokumente nach dem Reranking zurück
+
+    # 3b. Base Retriever konfigurieren, um MEHR Dokumente abzurufen (wichtig!)
     # Wir geben dem Reranker eine größere Auswahl, aus der er die besten auswählen kann.
     base_retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
 
-    # 1c. Contextual Compression Retriever erstellen
+    # 3c. Contextual Compression Retriever erstellen
     # Dieser "wickelt" sich um den Base Retriever und den Reranker
     compression_retriever = ContextualCompressionRetriever(
         base_compressor=reranker, base_retriever=base_retriever
     )
 
 
-
-
-    # 2. Prompt für die Umformulierung der Frage (Contextualizing question)
+    # --- 4. Prompt für die Umformulierung der Frage (Contextualizing question) ---
     contextualize_q_system_prompt = (
         "Angesichts eines Chat-Verlaufs und der neuesten Benutzerfrage, "
         "die sich auf den Kontext des Chat-Verlaufs beziehen könnte, "
@@ -230,12 +235,9 @@ def get_rag_chain_response(question: str, chat_history: list):
         | StrOutputParser()
     )
 
-    # Hilfsfunktion, um die Dokumente für das finale Prompt zu formatieren
-    # RR: um überflüssige Infos aus der Rückantwort zu entfernen
-    def format_docs(docs):
-        return "\n\n".join(doc.page_content for doc in docs)
-
-    # 3. Prompt für die finale Antwortgenerierung
+ 
+ 
+    # --- 5. Prompt für die finale Antwortgenerierung ---
     qa_system_prompt = (
     "Du bist ein Assistent für Fragen-Antworten-Aufgaben. Verwende die folgenden "
     "abgerufenen Kontextinformationen, um die Frage zu beantworten.  "
@@ -252,51 +254,65 @@ def get_rag_chain_response(question: str, chat_history: list):
         ]
     )
 
-    # 4. Komposition der gesamten RAG-Kette mit LCEL
-    rag_chain = (
-        # Das Eingabedictionary wird durchgereicht
-        RunnablePassthrough.assign(
-            # Neuer Schlüssel 'context' wird hinzugefügt.
-            # Er wird gefüllt, indem die Eingabe ('input', 'chat_history')
-            # an die 'rephrase_question_chain' geht, deren Ergebnis (die neue Frage)
-            # dann an den 'retriever' übergeben wird.
-            context=rephrase_question_chain | compression_retriever  | RunnableLambda(format_docs)
-        )
-        # RR 11.11.25 Zeile vorher: context=rephrase_question_chain | retriever | RunnableLambda(format_docs)
-        # Das erweiterte Dictionary ('input', 'chat_history', 'context')
-        # wird an das finale Prompt übergeben.
-        | qa_prompt
-        | llm
-        | StrOutputParser()
+
+
+    # -- Hilfsfunktion --- 
+    # RR: für finalen Prompt formatieren: überflüssige Infos aus der Rückantwort zu entfernen
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
+
+
+
+    # --- 6. Komposition der RAG-Logik  ---
+     rag_chain_with_history  = (
+            # Das Eingabedictionary wird durchgereicht
+            RunnablePassthrough.assign(
+                # Neuer Schlüssel 'context' wird hinzugefügt.
+                # Er wird gefüllt, indem die Eingabe ('input', 'chat_history')
+                # an die 'rephrase_question_chain' geht, deren Ergebnis (die neue Frage)
+                # dann an den 'retriever' übergeben wird.
+                context=rephrase_question_chain | compression_retriever  | RunnableLambda(format_docs)
+            )
+            # RR 11.11.25 Zeile vorher: context=rephrase_question_chain | retriever | RunnableLambda(format_docs)
+            # Das erweiterte Dictionary ('input', 'chat_history', 'context')
+            # wird an das finale Prompt übergeben.
+            | qa_prompt
+            | llm
+            | StrOutputParser()
+     )
+
+    
+    
+    # --- 7. FINALE KETTE mit Verzweigung (RunnableBranch) ---
+    full_chain = RunnableBranch(
+        # Die Bedingung: Wir rufen die Relevanz-Prüfung auf.
+        # Das Lambda prüft, ob die Ausgabe (nach .strip() und .lower()) 'ja' ist.
+        (lambda x: "ja" in relevance_checker_chain.invoke({"question": x["input"]}).strip().lower(), 
+         # Wenn die Bedingung WAHR ist (Frage ist relevant), führe die RAG-Kette aus.
+         rag_chain_with_history),
+        
+        # Wenn die Bedingung FALSCH ist (Frage ist irrelevant), führe die "Off-Topic"-Kette aus.
+        off_topic_response_chain
     )
 
-    # 5. Kette aufrufen
+       
+
+    # --- 8. Kette aufrufen ---
     response = rag_chain.invoke({
         "input": question,
         "chat_history": chat_history
     })
     
-     # RR Temporärer Debug-Schritt:
-    rephrased_question = rephrase_question_chain.invoke({"input": question, "chat_history": chat_history})
-    print(f"Version:1 DEBUG: Original='{question}' | Rephrased='{rephrased_question}'")
-    
-   
+    # RR Temporärer Debug-Schritt:
+    # rephrased_question = rephrase_question_chain.invoke({"input": question, "chat_history": chat_history})
+    # print(f"Version:1 DEBUG: Original='{question}' | Rephrased='{rephrased_question}'")
+      
     return response
-
-    # RR auskommentiert 10.11.2025 weil oben bereits zugewiesen
-    # Der .invoke() Aufruf in der LCEL Kette
-    # if retriever:
-    #     return response["answer"]
-    # else:
-    #     return rag_chain.invoke(None) # Ruft die Ersatz-Funktion auf, wenn der Retriever fehlt
-
 
 
 
 # Beispiel für direkten Test (wird bei Import ignoriert, aber funktioniert beim direkten Ausführen)
 if __name__ == "__main__":
-    # Testen Sie hier Ihre Kette mit einem Environment-Setup (API Keys)
-    # Beachten Sie, dass Sie hier die API-Keys manuell setzen müssten, falls Sie außerhalb von Streamlit testen
     print("Starte lokalen Test der RAG-Pipeline...")
     
     if retriever:

@@ -8,36 +8,6 @@
 # openai==2.7.1
 # langchain-cohere
 
-# LangChain 0.1.x releases expose ContextualCompressionRetriever via
-# langchain.retrievers.contextual_compression and keep the split-core packages.
-# We stay within the 0.1 line to avoid the breaking 0.2 refactor for now.
-# langchain>=0.1.17,<0.2.0
-# langchain-community>=0.1.0,<0.2.0
-# langchain-core>=0.1.52,<0.2.0
-# langchain-openai>=0.0.8,<0.1.0
-# langchain-pinecone>=0.0.3,<0.1.0
-# langchain-cohere>=0.0.6,<0.1.0
-
-
-# LangChain 0.3.x exposes ContextualCompressionRetriever at
-# langchain.retrievers.contextual_compression without relying on the
-# compatibility layer.  Keep the companion packages on matching minor versions.
-# langchain>=0.3.14,<0.4.0
-# langchain-community>=0.3.12,<0.4.0
-# langchain-core>=0.3.25,<0.4.0
-# langchain-openai>=0.2.5,<0.3.0
-# langchain-pinecone>=0.1.1,<0.2.0
-# langchain-cohere>=0.3.0,<0.4.0
-
-# langchain-openai 0.2.x targets the OpenAI Python client 1.x series.
-# openai>=1.60.0,<2.0.0
-
-
-# langchain-openai 0.0.x still targets the OpenAI Python client 1.x series.
-# openai>=1.10.0,<2.0.0
-# openai==2.7.1
-
-
 # Hier die aktuellsten Versionen der Pakete (Stand: heute, 11.11.2025, laut PyPI):
 # langchain → 1.0.5 
 # langchain-community → 0.4.1 
