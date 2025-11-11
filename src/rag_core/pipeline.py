@@ -262,7 +262,7 @@ def get_rag_chain_response(question: str, chat_history: list):
 
 
     # --- 6. Komposition der RAG-Logik  ---
-     rag_chain_with_history  = (
+    rag_chain_with_history  = (
             # Das Eingabedictionary wird durchgereicht
             RunnablePassthrough.assign(
                 # Neuer Schlüssel 'context' wird hinzugefügt.
@@ -310,13 +310,13 @@ def get_rag_chain_response(question: str, chat_history: list):
 
 
 # Beispiel für direkten Test (wird bei Import ignoriert, aber funktioniert beim direkten Ausführen)
-if __name__ == "__main__":
-    print("Starte lokalen Test der RAG-Pipeline...")
+# if __name__ == "__main__":
+#     print("Starte lokalen Test der RAG-Pipeline...")
     
-    if retriever:
-        test_query = "Welche Hauptthemen werden im Dokument behandelt?"
-        answer = get_rag_chain_response(test_query)
-        print(f"Frage: {test_query}")
-        print(f"Antwort: {answer}")
-    else:
-        print("Test fehlgeschlagen: Retriever nicht initialisiert.")
+#     if retriever:
+#         test_query = "Welche Hauptthemen werden im Dokument behandelt?"
+#         answer = get_rag_chain_response(test_query)
+#         print(f"Frage: {test_query}")
+#         print(f"Antwort: {answer}")
+#     else:
+#         print("Test fehlgeschlagen: Retriever nicht initialisiert.")

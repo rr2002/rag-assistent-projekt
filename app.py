@@ -29,7 +29,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 if current_dir not in sys.path:
     sys.path.append(current_dir)
 
-# 3. Jetzt funktioniert der Import der Pipeline
+# 3. Import der Pipeline
 from src.rag_core.pipeline import get_rag_chain_response
 # *****************************************************************
 
