@@ -34,6 +34,10 @@ except ImportError:
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT") # Oder PINECONE_HOST
+# RR mit ChatGPT hinzugefügt und auch von rerank-english-v3.0 auf multilingual für Deutsch geändert
+COHERE_RERANK_MODEL = os.getenv("COHERE_RERANK_MODEL", "rerank-multilingual-v3.0")
+
+
 
 if not all([OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_ENVIRONMENT]):
     # Dies ist hilfreich für Debugging
@@ -41,6 +45,7 @@ if not all([OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_ENVIRONMENT]):
     # Du könntest hier auch raise ValueError(...) aufrufen
 # *******************************
 
+# --- 1. Initialisierung der Komponenten ---
 
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -57,7 +62,7 @@ from langchain_cohere import CohereRerank
 # RR from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 from langchain_classic.retrievers.contextual_compression import ContextualCompressionRetriever
 
-# --- 1. Initialisierung der Komponenten ---
+
 
 # from langchain.retrievers import ContextualCompressionRetriever
 # und falls du noch Compressor-Klassen nutzt, z.B.:
@@ -178,7 +183,9 @@ def get_rag_chain_response(question: str, chat_history: list):
 
     # 1a. Cohere Reranker initialisieren
     # Der API-Schlüssel wird automatisch aus der Umgebungsvariable COHERE_API_KEY gelesen
-    reranker = CohereRerank(top_n=3) # Gibt die Top 3 Dokumente nach dem Reranking zurück
+    # RR mit ChatGPT auskommentiert und Zeile unterhalb hinzugefügt
+    # reranker = CohereRerank(top_n=3) # Gibt die Top 3 Dokumente nach dem Reranking zurück
+    reranker = CohereRerank(model=COHERE_RERANK_MODEL, top_n=3) # Gibt die Top 3 Dokumente nach dem Reranking zurück
 
     # 1b. Base Retriever konfigurieren, um MEHR Dokumente abzurufen (wichtig!)
     # Wir geben dem Reranker eine größere Auswahl, aus der er die besten auswählen kann.
