@@ -3,39 +3,34 @@
 # Importiere die notwendigen Module
 import os
 import sys
+import streamlit as st
+from langchain_core.messages import AIMessage, HumanMessage
 
-# *****************************************************************
-# 1. Zum Projekt-Root-Verzeichnis navigieren (eine Ebene hoch)
-# um 'src' als Top-Level-Paket zu finden.
-# Annahme: 'notebooks' liegt direkt unter dem Root.
-current_dir = os.path.dirname(os.path.abspath(__file__)) # Aktuelles Verzeichnis (notebooks/)
-project_root = os.path.join(current_dir, os.pardir)     # Eine Ebene höher (Root-Verzeichnis)
 
-# RR current_dirstreamlit run app.py = os.getcwd()
-# RR project_root = os.path.join(current_dir, os.pardir)
+# Projekt-Verzeichnisse identifizieren 
+# Annahme: 'notebooks' oder 'src' liegt direkt unter dem Root.
+current_dir = os.path.dirname(os.path.abspath(__file__)) # Aktuelles Verzeichnis (notebooks/ oder src)
+project_root = os.path.join(current_dir, os.pardir)      # Eine Ebene höher (Root-Verzeichnis)
 
-# 2. Den Root-Pfad zum Python-Suchpfad hinzufügen
+
+# Root-Pfad zum Python-Suchpfad hinzufügen
 # Dadurch kann Python 'src' als Top-Level-Paket finden
 if project_root not in sys.path:
     sys.path.append(project_root)
-# *****************************************************************
 
-# 3. Jetzt funktioniert der Import wie in der app.py
-# *****************************************************************
-# 1. Projekt-Root ermitteln (das Verzeichnis, in dem app.py liegt)
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-# 2. Root zum Python-Suchpfad hinzufügen (nur falls nicht schon vorhanden)
 if current_dir not in sys.path:
     sys.path.append(current_dir)
 
-# 3. Import der Pipeline
-# from src.rag_core.pipeline import get_rag_chain_response
-from src.rag_core.pipeline import stream_rag_chain_response
-# *****************************************************************
+# RR31  3. Jetzt funktioniert der Import wie in der app.py
+# RR31  1. Projekt-Root ermitteln (das Verzeichnis, in dem app.py liegt)
+# RR31  current_dir = os.path.dirname(os.path.abspath(__file__))
+# RR31  2. Root zum Python-Suchpfad hinzufügen (nur falls nicht schon vorhanden)
 
-import streamlit as st
-from langchain_core.messages import AIMessage, HumanMessage
+
+# 3. Import der Pipeline
+from src.rag_core.pipeline import stream_rag_chain_response
+# from src.rag_core.pipeline import get_rag_chain_response
+
 
 # RR auskommentiert am 11.11 sinnvoll zum Debugen
 # VORÜBERGEHENDE DEBUG-FUNKTION:
@@ -46,17 +41,9 @@ from langchain_core.messages import AIMessage, HumanMessage
 # st.sidebar.markdown("---")
 # ENTFERNE DIESEN CODE NACH DEM TEST
 
-# --- Angenommen, du importierst deine rag_chain (oder definierst sie hier neu) ---
-# Importiere die notwendigen LangChain-Komponenten
-# from deine_rag_modul import rag_chain 
-
-
-# rr def get_rag_response(question):
-# rr    # ANPASSEN: Rufe hier deine definierte rag_chain auf
-# rr    response = rag_chain.invoke(question) 
-    
 
 # --------------------------------------------------------------------------
+
 
 # Setze den OpenAI API Key als Umgebungsvariable (LangChain/OpenAI erwartet dies)
 import os
@@ -68,7 +55,7 @@ except KeyError:
 
 
 ## Streamlit UI Konfiguration
-st.set_page_config(page_title="PDF RAG Chatbot", layout="centered")
+st.set_page_config(page_title="RAG Chatbot", layout="centered")
 st.title("📚 Digitaler Chatbot - Ask me anything")
 st.caption("Verwendet gpt-5 (LLM) und text-embedding-3-small (Embeddings) mit Pinecone.")
 
@@ -105,7 +92,7 @@ if user_query is not None and user_query != "":
     # 2. Generiere die Antwort
     with st.chat_message("AI"):
         with st.spinner("Antwort wird generiert..."):
-            # Rufe deine tatsächliche RAG-Funktion auf
+            # Rufe tatsächliche RAG-Funktion auf
             response_generator = stream_rag_chain_response(question = user_query, chat_history = st.session_state.chat_history)
             full_response = st.write_stream(response_generator)
             # st.write(ai_response)

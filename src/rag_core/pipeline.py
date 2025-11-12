@@ -33,7 +33,7 @@ from langchain_classic.retrievers.contextual_compression import ContextualCompre
 try:
     from dotenv import load_dotenv
     # Da die Keys im Terminal gesetzt sein könnten (höhere Prio), 
-    # rufen wir load_dotenv() trotzdem auf, um alle anderen lokalen Keys zu laden.
+    # rufen load_dotenv() trotzdem auf, um alle anderen lokalen Keys zu laden.
     load_dotenv() 
     print("INFO: .env Datei lokal geladen.") # Optional: Nur zum Debuggen
 except ImportError:
@@ -54,9 +54,9 @@ PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT") # Oder PINECONE_HOST
 
 
 if not all([OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_ENVIRONMENT]):
-    # Dies ist hilfreich für Debugging
+    # hilfreich für Debugging
     print("FEHLER: Nicht alle kritischen API-Schlüssel sind als Umgebungsvariable gesetzt.")
-    # Du könntest hier auch raise ValueError(...) aufrufen
+    # Alternativ könnte man hier auch raise ValueError(...) aufrufen
 # *******************************
 
 
@@ -68,7 +68,6 @@ llm = ChatOpenAI(model="gpt-5", temperature=0)
 INDEX_NAME = "ki-master"
 
 # Pinecone Initialisierung und Retriever-Erstellung
-# Wir nutzen die LangChain-Methode, die oft einfacher ist und die ENV-Variable braucht.
 
 try:
     # 1. Pinecone Initialisierung (stellt die Umgebungsvariablen sicher)
@@ -79,13 +78,13 @@ try:
     # Dies ist die sauberste Methode, wenn man PINECONE_API_KEY und PINECONE_ENVIRONMENT nutzt.
     
     # Es ist nicht notwendig, den Client 'pc' separat zu initialisieren, wenn LangChain es tut.
-    # Entferne die Zeile: pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+    # daher diese Zeile entfernt: pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
     
-    # **KORREKTUR:** Wir verwenden PineconeVectorStore.from_existing_index 
-    # und lassen ihn die Umgebungsvariablen PINECONE_API_KEY und PINECONE_ENVIRONMENT lesen.
+    # KORREKTUR: Es wird PineconeVectorStore.from_existing_index verwendet
+    # und lesen die Umgebungsvariablen PINECONE_API_KEY und PINECONE_ENVIRONMENT 
     
     # 2. Den Vektor-Store laden über die LangChain-spezifische Methode
-    from langchain_pinecone import PineconeVectorStore # Stelle sicher, dass du dies importierst
+    from langchain_pinecone import PineconeVectorStore 
     
     vectorstore = PineconeVectorStore.from_existing_index(
         index_name=INDEX_NAME, 
@@ -96,7 +95,7 @@ try:
     retriever = vectorstore.as_retriever()
     
 except Exception as e:
-    # Gebe den genauen Fehler aus, falls die Verbindung fehlschlägt.
+    # Fehler ausgeben, falls die Verbindung fehlschlägt.
     print(f"FEHLER beim Initialisieren von Pinecone/Retriever: {e}")
     retriever = None
 
@@ -195,7 +194,7 @@ def stream_rag_chain_response(question: str, chat_history: list):
     # LCEL-Kette, um die Frage neu zu formulieren
     rephrase_question_chain = contextualize_q_prompt | llm | StrOutputParser()
 
-    # RR: für finalen Prompt formatieren: überflüssige Infos aus der Rückantwort zu entfernen
+    # RR: für finalen Prompt formatieren: überflüssige Infos aus der Rückantwort entfernen
     def format_docs(docs):
         return "\n\n".join(doc.page_content for doc in docs)
 
@@ -219,7 +218,7 @@ def stream_rag_chain_response(question: str, chat_history: list):
     # --- 5. FINALE KETTE mit Verzweigung (RunnableBranch) ---
     full_chain = RunnableBranch(
         (lambda x: "ja" in relevance_checker_chain.invoke({"question": x["input"]}).strip().lower(), rag_chain_with_history),
-        off_topic_stream  # Hier rufen wir direkt die Generator-Funktion auf
+        off_topic_stream  # Generator-Funktion aufrufen
     )
 
     # Unterschied zu get_rag_chain_response: .stream() statt .invoke() aufrufen
@@ -238,6 +237,9 @@ def stream_rag_chain_response(question: str, chat_history: list):
 
 
 #######################################################################
+
+# Hinweis: get_rag_chain_response funktioniert und gibt Erbebnis ohne streamen aus. 
+# statt get_rag_chain_response wird stream_rag_chain_response verwendet
 
 def get_rag_chain_response(question: str, chat_history: list):
 
@@ -284,10 +286,11 @@ def get_rag_chain_response(question: str, chat_history: list):
     # --- 3. Reranker ---
     # Reranking zur Verbesserung der Kontextqualität.
     # 3a. Cohere Reranker initialisieren
+    COHERE_RERANK_MODEL = os.getenv("COHERE_RERANK_MODEL", "rerank-multilingual-v3.0")
     reranker = CohereRerank(model=COHERE_RERANK_MODEL, top_n=5) # Gibt die Top 5 Dokumente nach dem Reranking zurück
 
     # 3b. Base Retriever konfigurieren, um MEHR Dokumente abzurufen (wichtig!)
-    # Wir geben dem Reranker eine größere Auswahl, aus der er die besten auswählen kann.
+    # Dem Reranker eine größere Auswahl geben, aus der er die besten auswählen kann
     base_retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
 
     # 3c. Contextual Compression Retriever erstellen
@@ -371,7 +374,7 @@ def get_rag_chain_response(question: str, chat_history: list):
     
     # --- 7. FINALE KETTE mit Verzweigung (RunnableBranch) ---
     full_chain = RunnableBranch(
-        # Die Bedingung: Wir rufen die Relevanz-Prüfung auf.
+        # Die Bedingung: Relevanz-Prüfung aufrufen
         # Das Lambda prüft, ob die Ausgabe (nach .strip() und .lower()) 'ja' ist.
         (lambda x: "ja" in relevance_checker_chain.invoke({"question": x["input"]}).strip().lower(), 
          # Wenn die Bedingung WAHR ist (Frage ist relevant), führe die RAG-Kette aus.
