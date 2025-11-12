@@ -30,7 +30,8 @@ if current_dir not in sys.path:
     sys.path.append(current_dir)
 
 # 3. Import der Pipeline
-from src.rag_core.pipeline import get_rag_chain_response
+# from src.rag_core.pipeline import get_rag_chain_response
+from src.rag_core.pipeline import stream_rag_chain_response
 # *****************************************************************
 
 import streamlit as st
@@ -105,11 +106,12 @@ if user_query is not None and user_query != "":
     with st.chat_message("AI"):
         with st.spinner("Antwort wird generiert..."):
             # Rufe deine tatsächliche RAG-Funktion auf
-            ai_response = get_rag_chain_response(question = user_query, chat_history = st.session_state.chat_history)
-            st.write(ai_response)
+            response_generator = stream_rag_chain_response(question = user_query, chat_history = st.session_state.chat_history)
+            full_response = st.write_stream(response_generator)
+            # st.write(ai_response)
             
     # 3. Füge die AI-Antwort zum Verlauf hinzu
-    st.session_state.chat_history.append(AIMessage(content=ai_response))
+    st.session_state.chat_history.append(AIMessage(content=full_response))
 
 # Hinweis: Das Speichern des Verlaufs *nach* der Verarbeitung ist entscheidend,
 # damit die neue AI-Antwort beim nächsten Rerun angezeigt wird.

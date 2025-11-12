@@ -50,8 +50,6 @@ except ImportError:
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
 PINECONE_ENVIRONMENT = os.getenv("PINECONE_ENVIRONMENT") # Oder PINECONE_HOST
-# RR mit ChatGPT hinzugefügt und auch von rerank-english-v3.0 auf multilingual für Deutsch geändert
-COHERE_RERANK_MODEL = os.getenv("COHERE_RERANK_MODEL", "rerank-multilingual-v3.0")
 
 
 
@@ -150,6 +148,96 @@ else:
 #     else:
 #         return rag_chain.invoke(None) # Ruft die Ersatz-Funktion auf, wenn der Retriever fehlt
 
+
+def stream_rag_chain_response(question: str, chat_history: list):
+    #
+    # Baut die RAG-Kette auf und gibt einen Generator zurück, der die Antwort streamt.
+    #
+    
+    if not vectorstore:
+        # Für den Fehlerfall wird ein Generator zurückgeben,
+        # der die Fehlermeldung einmalig "yieldet".
+        yield "Entschuldigung, die Verbindung zur Wissensdatenbank ist fehlgeschlagen."
+        return
+
+     
+    # 1. --- Guard-Rail Ketten ---
+    allowed_topic = "den beruflichen Werdegang, die Hobbies, die Interessen, die Fähigkeiten und die Projekte von Robert"
+    relevance_check_prompt = ChatPromptTemplate.from_template(f"Bezieht sich folgende Frage auf {allowed_topic}? Antworte nur mit 'Ja' oder 'Nein'.\n\nFrage: \"{{question}}\"")
+    relevance_checker_chain = relevance_check_prompt | llm | StrOutputParser()
+    
+    # Diese Kette muss auch einen Generator zurückgeben, um konsistent zu sein
+    def off_topic_stream():
+        yield f"Entschuldigung, ich kann nur Fragen beantworten, die sich auf {allowed_topic} beziehen."
+    
+    
+    # --- Die RAG-Kette selbst --- 
+    
+    
+    # 2. --- Reranker --- 
+    # Cohere Reranker initialisieren
+    COHERE_RERANK_MODEL = os.getenv("COHERE_RERANK_MODEL", "rerank-multilingual-v3.0")
+    reranker = CohereRerank(model=COHERE_RERANK_MODEL, top_n=3)
+    # Base Retriever konfigurieren, um MEHR Dokumente abzurufen
+    base_retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
+    # Contextual Compression Retriever erstellen
+    compression_retriever = ContextualCompressionRetriever(base_compressor=reranker, base_retriever=base_retriever)
+    
+    
+    # 3. --- Chat History (Memory) ---
+    # Prompt für die Umformulierung der Frage (Contextualizing question) 
+    contextualize_q_prompt = ChatPromptTemplate.from_messages([
+        ("system", "Angesichts eines Chat-Verlaufs und der neuesten Benutzerfrage, die sich auf den Kontext des Chat-Verlaufs beziehen könnte, formuliere eine eigenständige Frage..."), # Gekürzt
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+    ])
+    
+    # LCEL-Kette, um die Frage neu zu formulieren
+    rephrase_question_chain = contextualize_q_prompt | llm | StrOutputParser()
+
+    # RR: für finalen Prompt formatieren: überflüssige Infos aus der Rückantwort zu entfernen
+    def format_docs(docs):
+        return "\n\n".join(doc.page_content for doc in docs)
+
+
+    # --- 4. Prompt für die finale Antwortgenerierung ---
+    # RR in get_rag_chain_response mit Variable qa_system_prompt ist es besser formuliert (ggf. umbauen)
+    qa_prompt = ChatPromptTemplate.from_messages([
+        ("system", "Du bist ein Assistent... \n\n{context}"), # Gekürzt
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+    ])
+    
+    rag_chain_with_history = (
+        RunnablePassthrough.assign(context=rephrase_question_chain | compression_retriever | format_docs)
+        | qa_prompt
+        | llm
+        | StrOutputParser()
+    )
+
+ 
+    # --- 5. FINALE KETTE mit Verzweigung (RunnableBranch) ---
+    full_chain = RunnableBranch(
+        (lambda x: "ja" in relevance_checker_chain.invoke({"question": x["input"]}).strip().lower(), rag_chain_with_history),
+        off_topic_stream  # Hier rufen wir direkt die Generator-Funktion auf
+    )
+
+    # Unterschied zu get_rag_chain_response: .stream() statt .invoke() aufrufen
+    # Generator iterieren und "yielden" jedes einzelne Stück (Chunk) weiter
+    
+    # --- 8. Kette aufrufen ---
+    response_stream = full_chain.stream({
+        "input": question,
+        "chat_history": chat_history
+    })
+    
+    for chunk in response_stream:
+        yield chunk
+
+
+
+
+#######################################################################
 
 def get_rag_chain_response(question: str, chat_history: list):
 
@@ -307,6 +395,8 @@ def get_rag_chain_response(question: str, chat_history: list):
       
     return response
 
+# Ende der Funktion get_rag_chain_response
+#######################################################################
 
 
 # RR auskommentiert am 11.11. bei get_rag_chain_response(test_query) fehlt ein Parameter,
