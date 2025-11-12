@@ -64,7 +64,11 @@ if not all([OPENAI_API_KEY, PINECONE_API_KEY, PINECONE_ENVIRONMENT]):
 # API Keys werden aus den Umgebungsvariablen gelesen (diese müssen im Streamlit Code gesetzt werden!)
 # Die Dimension war 1536
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-llm = ChatOpenAI(model="gpt-5", temperature=0)
+# llm = ChatOpenAI(model="gpt-5", temperature=0)
+# "Qualitäts"-LLM für die finale Antwort
+llm_quality = ChatOpenAI(model="gpt-5", temperature=0)
+# "Geschwindigkeits"-LLM für die Hilfsaufgaben
+llm_fast = ChatOpenAI(model="gpt-5-nano", temperature=0)
 INDEX_NAME = "ki-master"
 
 # Pinecone Initialisierung und Retriever-Erstellung
@@ -120,24 +124,6 @@ def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
 
-# --- 3. Die RAG-Kette final erstellen ---
-
-if retriever:
-    # Die LangChain Expression Language (LCEL) Kette
-    rag_chain = (
-        {"context": retriever | format_docs, "question": RunnablePassthrough()}
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
-else:
-    # Ersatz-Kette, falls die Datenbankverbindung fehlschlägt
-    rag_chain = RunnablePassthrough() | (lambda x: "Entschuldigung, die RAG-Pipeline konnte nicht geladen werden (Datenbankverbindung fehlgeschlagen).")
-    
-    
-# --- 4. Exponierte Funktion für Streamlit ---
-
-
 # RR auskommentiert 10.11.2025
 # def get_rag_chain_response(question: str) -> str:
 #     """Führt die RAG-Kette mit einer Benutzerfrage aus."""
@@ -163,7 +149,7 @@ def stream_rag_chain_response(question: str, chat_history: list):
     # 1. --- Guard-Rail Ketten ---
     allowed_topic = "den beruflichen Werdegang, die Hobbies, die Interessen, die Fähigkeiten und die Projekte von Robert"
     relevance_check_prompt = ChatPromptTemplate.from_template(f"Bezieht sich folgende Frage auf {allowed_topic}? Antworte nur mit 'Ja' oder 'Nein'.\n\nFrage: \"{{question}}\"")
-    relevance_checker_chain = relevance_check_prompt | llm | StrOutputParser()
+    relevance_checker_chain = relevance_check_prompt | llm_fast | StrOutputParser()
     
     # Diese Kette muss auch einen Generator zurückgeben, um konsistent zu sein
     def off_topic_stream(ignored_input):
@@ -178,7 +164,7 @@ def stream_rag_chain_response(question: str, chat_history: list):
     COHERE_RERANK_MODEL = os.getenv("COHERE_RERANK_MODEL", "rerank-multilingual-v3.0")
     reranker = CohereRerank(model=COHERE_RERANK_MODEL, top_n=3)
     # Base Retriever konfigurieren, um MEHR Dokumente abzurufen
-    base_retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+    base_retriever = vectorstore.as_retriever(search_kwargs={"k": 5}) # RR von 10 auf 5 geändert
     # Contextual Compression Retriever erstellen
     compression_retriever = ContextualCompressionRetriever(base_compressor=reranker, base_retriever=base_retriever)
     
@@ -192,7 +178,7 @@ def stream_rag_chain_response(question: str, chat_history: list):
     ])
     
     # LCEL-Kette, um die Frage neu zu formulieren
-    rephrase_question_chain = contextualize_q_prompt | llm | StrOutputParser()
+    rephrase_question_chain = contextualize_q_prompt | llm_fast | StrOutputParser()
 
     # RR: für finalen Prompt formatieren: überflüssige Infos aus der Rückantwort entfernen
     def format_docs(docs):
@@ -210,7 +196,7 @@ def stream_rag_chain_response(question: str, chat_history: list):
     rag_chain_with_history = (
         RunnablePassthrough.assign(context=rephrase_question_chain | compression_retriever | format_docs)
         | qa_prompt
-        | llm
+        | llm_quality
         | StrOutputParser()
     )
 
@@ -224,7 +210,7 @@ def stream_rag_chain_response(question: str, chat_history: list):
     # Unterschied zu get_rag_chain_response: .stream() statt .invoke() aufrufen
     # Generator iterieren und "yielden" jedes einzelne Stück (Chunk) weiter
     
-    # --- 8. Kette aufrufen ---
+    # --- 6. Kette aufrufen ---
     response_stream = full_chain.stream({
         "input": question,
         "chat_history": chat_history
@@ -270,7 +256,7 @@ def get_rag_chain_response(question: str, chat_history: list):
     
     relevance_checker_chain = (
         relevance_check_prompt
-        | llm
+        | llm_fast
         | StrOutputParser()
     )
     
@@ -320,7 +306,7 @@ def get_rag_chain_response(question: str, chat_history: list):
         # LCEL-Kette, um die Frage neu zu formulieren
     rephrase_question_chain = (
         contextualize_q_prompt
-        | llm
+        | llm_fast
         | StrOutputParser()
     )
 
@@ -366,7 +352,7 @@ def get_rag_chain_response(question: str, chat_history: list):
             # Das erweiterte Dictionary ('input', 'chat_history', 'context')
             # wird an das finale Prompt übergeben.
             | qa_prompt
-            | llm
+            | llm_quality
             | StrOutputParser()
      )
 
