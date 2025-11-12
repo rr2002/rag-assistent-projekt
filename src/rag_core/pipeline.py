@@ -166,7 +166,7 @@ def stream_rag_chain_response(question: str, chat_history: list):
     relevance_checker_chain = relevance_check_prompt | llm | StrOutputParser()
     
     # Diese Kette muss auch einen Generator zurückgeben, um konsistent zu sein
-    def off_topic_stream():
+    def off_topic_stream(ignored_input):
         yield f"Entschuldigung, ich kann nur Fragen beantworten, die sich auf {allowed_topic} beziehen."
     
     
@@ -278,7 +278,7 @@ def get_rag_chain_response(question: str, chat_history: list):
     
     # --- 2. Kette für themenfremde Fragen ---
     off_topic_response_chain = RunnableLambda(
-        lambda x: f"Entschuldigung, ich kann nur Fragen beantworten, die sich auf {allowed_topic} beziehen."
+        lambda x: f"    , ich kann nur Fragen beantworten, die sich auf {allowed_topic} beziehen."
     )
     
 
