@@ -89,15 +89,19 @@ if user_query is not None and user_query != "":
     with st.chat_message("User"):
         st.write(user_query)
         
-    # 2. Generiere die Antwort
+    # 2. Generiere und streame die Antwort
     with st.chat_message("AI"):
-        with st.spinner("Antwort wird generiert..."):
-            # Rufe tatsächliche RAG-Funktion auf
-            response_generator = stream_rag_chain_response(question = user_query, chat_history = st.session_state.chat_history)
-            full_response = st.write_stream(response_generator)
-            # st.write(ai_response)
+        # Streaming-Funktion aufrufen. Das Ergebnis ist ein Generator.
+        response_generator = stream_rag_chain_response(
+            question=user_query, 
+            chat_history=st.session_state.chat_history
+        )
+        
+        # st.write_stream ist die magische Funktion, die den Generator konsumiert
+        # und den Inhalt live anzeigt. Sie gibt am Ende die vollständige Antwort zurück.
+        full_response = st.write_stream(response_generator)
             
-    # 3. Füge die AI-Antwort zum Verlauf hinzu
+    # 3. Füge die vollständige AI-Antwort zum Verlauf hinzu, NACHDEM sie gestreamt wurde
     st.session_state.chat_history.append(AIMessage(content=full_response))
 
 # Hinweis: Das Speichern des Verlaufs *nach* der Verarbeitung ist entscheidend,
