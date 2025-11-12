@@ -164,7 +164,7 @@ def stream_rag_chain_response(question: str, chat_history: list):
     COHERE_RERANK_MODEL = os.getenv("COHERE_RERANK_MODEL", "rerank-multilingual-v3.0")
     reranker = CohereRerank(model=COHERE_RERANK_MODEL, top_n=3)
     # Base Retriever konfigurieren, um MEHR Dokumente abzurufen
-    base_retriever = vectorstore.as_retriever(search_kwargs={"k": 5}) # RR von 10 auf 5 geändert
+    base_retriever = vectorstore.as_retriever(search_kwargs={"k": 10}) # RR von 10 auf 5 geändert
     # Contextual Compression Retriever erstellen
     compression_retriever = ContextualCompressionRetriever(base_compressor=reranker, base_retriever=base_retriever)
     
