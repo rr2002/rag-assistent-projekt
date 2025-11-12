@@ -68,7 +68,7 @@ embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 # "Qualitäts"-LLM für die finale Antwort
 llm_quality = ChatOpenAI(model="gpt-5", temperature=0)
 # "Geschwindigkeits"-LLM für die Hilfsaufgaben
-llm_fast = ChatOpenAI(model="gpt-5-nano", temperature=0)
+llm_fast = ChatOpenAI(model="gpt-5-mini", temperature=0) # gpt-5-mini oder gpt-5-nano
 INDEX_NAME = "ki-master"
 
 # Pinecone Initialisierung und Retriever-Erstellung
